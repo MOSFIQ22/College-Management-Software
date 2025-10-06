@@ -1,0 +1,220 @@
+-- database: college_attendance
+CREATE DATABASE IF NOT EXISTS college_attendance
+  CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci;
+USE college_attendance;
+
+-- students
+CREATE TABLE students (
+  student_id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  roll_no VARCHAR(50) NOT NULL,
+  first_name VARCHAR(100) NOT NULL,
+  last_name VARCHAR(100),
+  email VARCHAR(150),
+  phone VARCHAR(30),
+  admission_year YEAR,
+  department VARCHAR(100),
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  UNIQUE KEY ux_students_roll (roll_no),
+  INDEX idx_students_dept (department)
+) ENGINE=InnoDB;
+
+-- teachers
+CREATE TABLE teachers (
+  teacher_id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  emp_code VARCHAR(50) NOT NULL,
+  first_name VARCHAR(100) NOT NULL,
+  last_name VARCHAR(100),
+  email VARCHAR(150),
+  phone VARCHAR(30),
+  department VARCHAR(100),
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  UNIQUE KEY ux_teachers_emp (emp_code),
+  INDEX idx_teachers_dept (department)
+) ENGINE=InnoDB;
+
+-- subjects (replacing courses)
+CREATE TABLE subjects (
+  subject_id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  subject_code VARCHAR(50) NOT NULL,
+  subject_name VARCHAR(200) NOT NULL,
+  credit DECIMAL(3,1) DEFAULT 0.0,
+  description TEXT,
+  UNIQUE KEY ux_subjects_code (subject_code)
+) ENGINE=InnoDB;
+
+-- classes (a specific offering of a subject, e.g., Section A, Semester X)
+CREATE TABLE classes (
+  class_id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  subject_id BIGINT UNSIGNED NOT NULL,
+  academic_year VARCHAR(20),        -- e.g., "2025-2026"
+  semester VARCHAR(20),             -- e.g., "Fall", "Spring", or "1"
+  section VARCHAR(50),              -- e.g., "A", "B"
+  schedule_info VARCHAR(255),       -- optional, e.g., "Mon/Wed 09:00-10:30"
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (subject_id) REFERENCES subjects(subject_id) ON DELETE CASCADE,
+  INDEX idx_classes_subject (subject_id)
+) ENGINE=InnoDB;
+
+-- enrollments (which student in which class)
+CREATE TABLE enrollments (
+  enrollment_id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  student_id BIGINT UNSIGNED NOT NULL,
+  class_id BIGINT UNSIGNED NOT NULL,
+  enrolled_on DATE DEFAULT CURRENT_DATE,
+  status TINYINT DEFAULT 1, -- 1=active, 0=withdrawn
+  UNIQUE KEY ux_enroll_student_class (student_id, class_id),
+  FOREIGN KEY (student_id) REFERENCES students(student_id) ON DELETE CASCADE,
+  FOREIGN KEY (class_id) REFERENCES classes(class_id) ON DELETE CASCADE,
+  INDEX idx_enroll_class (class_id)
+) ENGINE=InnoDB;
+
+-- teacher_assignments (which teacher teaches which class)
+CREATE TABLE teacher_assignments (
+  id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  teacher_id BIGINT UNSIGNED NOT NULL,
+  class_id BIGINT UNSIGNED NOT NULL,
+  assigned_on DATE DEFAULT CURRENT_DATE,
+  FOREIGN KEY (teacher_id) REFERENCES teachers(teacher_id) ON DELETE CASCADE,
+  FOREIGN KEY (class_id) REFERENCES classes(class_id) ON DELETE CASCADE,
+  UNIQUE KEY ux_teacher_class (teacher_id, class_id)
+) ENGINE=InnoDB;
+
+-- sessions (each lecture/meeting instance)
+CREATE TABLE sessions (
+  session_id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  class_id BIGINT UNSIGNED NOT NULL,
+  session_date DATE NOT NULL,
+  start_time TIME,
+  end_time TIME,
+  topic VARCHAR(255),
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE KEY ux_class_session_date (class_id, session_date),
+  FOREIGN KEY (class_id) REFERENCES classes(class_id) ON DELETE CASCADE,
+  INDEX idx_sessions_class_date (class_id, session_date)
+) ENGINE=InnoDB;
+
+-- attendance
+CREATE TABLE attendance (
+  attendance_id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  session_id BIGINT UNSIGNED NOT NULL,
+  student_id BIGINT UNSIGNED NOT NULL,
+  status ENUM('present','absent','late','excused') NOT NULL DEFAULT 'absent',
+  marked_by_teacher_id BIGINT UNSIGNED, -- optional, who marked it
+  marked_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  remark VARCHAR(255),
+  UNIQUE KEY ux_attendance_session_student (session_id, student_id),
+  FOREIGN KEY (session_id) REFERENCES sessions(session_id) ON DELETE CASCADE,
+  FOREIGN KEY (student_id) REFERENCES students(student_id) ON DELETE CASCADE,
+  FOREIGN KEY (marked_by_teacher_id) REFERENCES teachers(teacher_id) ON DELETE SET NULL,
+  INDEX idx_attendance_student (student_id),
+  INDEX idx_attendance_session (session_id)
+) ENGINE=InnoDB;
+
+------
+------
+for register or login
+----------------------------
+CREATE TABLE users (
+    id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(100) NOT NULL,
+    email VARCHAR(150) NOT NULL UNIQUE,
+    password VARCHAR(255) NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+
+
+
+---------------------------------------------------------------db insert script------------------------------------
+
+-- 1) Students (5)
+INSERT INTO students (roll_no, first_name, last_name, email, phone, admission_year, department)
+VALUES
+('2025-001', 'Arif',     'Hossain',  'arif.hossain@example.com',  '01710000001', 2025, 'Computer Science'),
+('2025-002', 'Nadia',    'Akter',    'nadia.akter@example.com',   '01710000002', 2025, 'Computer Science'),
+('2025-003', 'Rafi',     'Uddin',    'rafi.uddin@example.com',    '01710000003', 2025, 'Business'),
+('2025-004', 'Sadia',    'Begum',    'sadia.begum@example.com',   '01710000004', 2025, 'Civil Engineering'),
+('2025-005', 'Shuvo',    'Khan',     'shuvo.khan@example.com',    '01710000005', 2025, 'Computer Science');
+
+-- 2) Teachers (3)
+INSERT INTO teachers (emp_code, first_name, last_name, email, phone, department)
+VALUES
+('T-1001', 'Md. Karim',  'Ahmed',   'karim.ahmed@example.com',  '01711000001', 'Computer Science'),
+('T-1002', 'Farhana',    'Sultana', 'farhana.sultana@example.com','01711000002','Business'),
+('T-1003', 'Jamal',      'Mia',     'jamal.mia@example.com',    '01711000003', 'Civil Engineering');
+
+-- 3) Subjects (4)
+INSERT INTO subjects (subject_code, subject_name, credit, description)
+VALUES
+('CS101', 'Introduction to Programming', 3.0, 'Basics of programming using C/Python.'),
+('CS102', 'Data Structures',             3.0, 'Arrays, lists, trees, hashing and algorithms.'),
+('BUS201','Principles of Management',    2.0, 'Management theory and practice.'),
+('CE101', 'Engineering Drawing',         1.5, 'Basic drawing and CAD introduction.');
+
+-- 4) Classes (offerings)  -- assumes subjects inserted above receive IDs 1..4
+INSERT INTO classes (subject_id, academic_year, semester, section, schedule_info)
+VALUES
+(1, '2025-2026', 'Fall',  'A', 'Mon/Wed 09:00-10:30'),
+(2, '2025-2026', 'Fall',  'A', 'Tue/Thu 10:45-12:15'),
+(3, '2025-2026', 'Fall',  'B', 'Mon/Wed 13:00-14:30'),
+(4, '2025-2026', 'Fall',  'A', 'Fri 09:00-11:00');
+
+-- 5) Teacher assignments -- link teachers to classes
+-- assumes teachers ids 1..3 and classes ids 1..4 as inserted above
+INSERT INTO teacher_assignments (teacher_id, class_id, assigned_on)
+VALUES
+(1, 1, '2025-08-20'), -- Md. Karim -> CS101 class
+(1, 2, '2025-08-20'), -- Md. Karim -> CS102 class
+(2, 3, '2025-08-21'), -- Farhana -> BUS201 class
+(3, 4, '2025-08-22'); -- Jamal -> CE101 class
+
+-- 6) Enrollments (students into classes)
+-- assume student ids 1..5, class ids 1..4
+INSERT INTO enrollments (student_id, class_id, enrolled_on, status)
+VALUES
+(1, 1, '2025-08-25', 1), -- Arif in CS101
+(2, 1, '2025-08-25', 1), -- Nadia in CS101
+(5, 1, '2025-08-25', 1), -- Shuvo in CS101
+(1, 2, '2025-08-25', 1), -- Arif in CS102
+(5, 2, '2025-08-25', 1), -- Shuvo in CS102
+(3, 3, '2025-08-26', 1), -- Rafi in BUS201
+(4, 4, '2025-08-26', 1); -- Sadia in CE101
+
+-- 7) Sessions (lecture instances) for classes
+-- create a few sessions per class (dates are examples)
+INSERT INTO sessions (class_id, session_date, start_time, end_time, topic)
+VALUES
+(1, '2025-09-01', '09:00:00', '10:30:00', 'Intro & Course Outline'),   -- CS101
+(1, '2025-09-03', '09:00:00', '10:30:00', 'Variables & Data Types'),
+(2, '2025-09-02', '10:45:00', '12:15:00', 'Arrays and Linked Lists'),   -- CS102
+(3, '2025-09-01', '13:00:00', '14:30:00', 'Management Basics'),        -- BUS201
+(4, '2025-09-05', '09:00:00', '11:00:00', 'Orthographic Projection');  -- CE101
+
+-- 8) Attendance entries (for the sessions above)
+-- assumes session ids assigned sequentially (1..5) as above, and student ids 1..5
+INSERT INTO attendance (session_id, student_id, status, marked_by_teacher_id, marked_at, remark)
+VALUES
+-- Session 1 (CS101 on 2025-09-01): students 1,2,5 enrolled
+(1, 1, 'present', 1, '2025-09-01 09:05:00', 'On time'),
+(1, 2, 'late',    1, '2025-09-01 09:20:00', 'Arrived late'),
+(1, 5, 'absent',  1, '2025-09-01 09:00:00', 'No show'),
+
+-- Session 2 (CS101 on 2025-09-03)
+(2, 1, 'present', 1, '2025-09-03 09:02:00', NULL),
+(2, 2, 'present', 1, '2025-09-03 09:01:00', NULL),
+(2, 5, 'present', 1, '2025-09-03 09:00:00', NULL),
+
+-- Session 3 (CS102 on 2025-09-02): students 1 and 5 enrolled
+(3, 1, 'present', 1, '2025-09-02 10:50:00', 'Participated in lab'),
+(3, 5, 'absent',  1, '2025-09-02 10:45:00', 'Sick leave'),
+
+-- Session 4 (BUS201 on 2025-09-01): student 3 enrolled
+(4, 3, 'present', 2, '2025-09-01 13:05:00', NULL),
+
+-- Session 5 (CE101 on 2025-09-05): student 4 enrolled
+(5, 4, 'present', 3, '2025-09-05 09:10:00', 'Came early');
+
+
+
