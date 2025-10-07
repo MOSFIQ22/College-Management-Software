@@ -50,13 +50,13 @@ export default function Header() {
             >
             Login
          </Link> */}
-         <Link
+          <Link
              href="/register"
              className="bg-indigo-600 text-white px-4 py-2 rounded-full shadow hover:bg-indigo-700 transition font-medium"
               >
              Register
           </Link>
-
+         
       </nav>
 
         {/* Mobile Menu Button */}

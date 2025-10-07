@@ -5,8 +5,7 @@ import Hero from "@/components/Hero";
 import CourseCard from "@/components/CourseCard";
 import FacultyCard from "@/components/FacultyCard";
 import { motion } from "framer-motion";
-import login  from "@/pages/login";
-import register  from "@/pages/register";
+
 
 export default function Page() {
   const [courses, setCourses] = useState([]);
