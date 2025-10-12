@@ -4,6 +4,7 @@ import "../app/globals.css";
 
 export default function TeacherPage() {
   const [teacher, setTeacher] = useState({
+    teacher_id: "",
     emp_code: "",
     first_name: "",
     last_name: "",
@@ -14,15 +15,15 @@ export default function TeacherPage() {
 
   const [teachersList, setTeachersList] = useState([]);
 
-  // Fetch teachers on mount
+  // Fetch all teachers
   useEffect(() => {
     fetch("/api/teacher")
-      .then(res => res.json())
-      .then(data => setTeachersList(data))
-      .catch(err => console.error(err));
+      .then((res) => res.json())
+      .then((data) => setTeachersList(data))
+      .catch((err) => console.error("Fetch error:", err));
   }, []);
 
-  // Handle form field change
+  // Handle input change
   const handleChange = (e) => {
     const { name, value } = e.target;
     setTeacher({ ...teacher, [name]: value });
@@ -37,37 +38,30 @@ export default function TeacherPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(teacher),
       });
+
       const data = await res.json();
       if (data.success) {
-        alert("Teacher added successfully!");
-        setTeachersList([{ ...teacher, id: data.id }, ...teachersList]);
-        setTeacher({ emp_code: "", first_name: "", last_name: "", email: "", phone: "", department: "" });
+        alert("✅ Teacher added successfully!");
+        setTeachersList([{ ...teacher, teacher_id: data.id }, ...teachersList]);
+        resetForm();
       } else {
-        alert(data.error || "Failed to add teacher");
+        alert(data.error || "❌ Failed to add teacher");
       }
     } catch (err) {
       console.error(err);
-      alert("Something went wrong");
+      alert("❌ Something went wrong while adding teacher");
     }
   };
 
-  // Edit teacher (populate form)
+  // Edit teacher
   const handleEdit = (t) => {
-    setTeacher({
-      emp_code: t.emp_code,
-      first_name: t.first_name,
-      last_name: t.last_name,
-      email: t.email,
-      phone: t.phone,
-      department: t.department,
-      teacher_id: t.id,
-    });
+    setTeacher({ ...t });
   };
 
   // Update teacher
   const handleUpdate = async (e) => {
     e.preventDefault();
-    if (!teacher.teacher_id) return alert("No teacher selected for update");
+    if (!teacher.teacher_id) return alert("❗ No teacher selected for update");
 
     try {
       const res = await fetch("/api/teacher", {
@@ -75,57 +69,82 @@ export default function TeacherPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(teacher),
       });
+
       const data = await res.json();
       if (data.success) {
-        setTeachersList(teachersList.map(t => t.id === teacher.teacher_id ? teacher : t));
-        alert("Teacher updated successfully!");
-        setTeacher({ emp_code: "", first_name: "", last_name: "", email: "", phone: "", department: "" });
+        setTeachersList(
+          teachersList.map((t) =>
+            t.teacher_id === teacher.teacher_id ? teacher : t
+          )
+        );
+        alert("✅ Teacher updated successfully!");
+        resetForm();
       } else {
-        alert(data.error || "Failed to update teacher");
+        alert(data.error || "❌ Failed to update teacher");
       }
     } catch (err) {
       console.error(err);
-      alert("Something went wrong");
+      alert("❌ Something went wrong while updating teacher");
     }
   };
 
   // Delete teacher
-  const handleDelete = async (id) => {
+  const handleDelete = async (teacher_id) => {
     if (!confirm("Are you sure you want to delete this teacher?")) return;
 
     try {
       const res = await fetch("/api/teacher", {
         method: "DELETE",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ teacher_id: id }),
+        body: JSON.stringify({ teacher_id }),
       });
+
       const data = await res.json();
       if (data.success) {
-        setTeachersList(teachersList.filter(t => t.id !== id));
-        alert("Teacher deleted successfully!");
+        setTeachersList(
+          teachersList.filter((t) => t.teacher_id !== teacher_id)
+        );
+        alert("✅ Teacher deleted successfully!");
       } else {
-        alert(data.error || "Failed to delete teacher");
+        alert(data.error || "❌ Failed to delete teacher");
       }
     } catch (err) {
       console.error(err);
-      alert("Something went wrong");
+      alert("❌ Something went wrong while deleting teacher");
     }
+  };
+
+  // Reset form
+  const resetForm = () => {
+    setTeacher({
+      teacher_id: "",
+      emp_code: "",
+      first_name: "",
+      last_name: "",
+      email: "",
+      phone: "",
+      department: "",
+    });
   };
 
   return (
     <div className="min-h-screen bg-gray-100 p-10">
+      <h1 className="text-4xl font-bold text-gray-800 text-center mb-12">
+        Teacher Information
+      </h1>
 
-      {/* Page Title */}
-      <h1 className="text-4xl font-bold text-gray-800 text-center mb-12">Teacher Management</h1>
-
-      {/* Form Section */}
+      {/* Form */}
       <section className="max-w-4xl mx-auto bg-white rounded-xl shadow-md p-10 mb-16">
-        <h2 className="text-2xl font-semibold text-gray-700 mb-6 border-b pb-2">{teacher.teacher_id ? "Edit Teacher" : "Add New Teacher"}</h2>
+        <h2 className="text-2xl font-semibold text-gray-700 mb-6 border-b pb-2">
+          {teacher.teacher_id ? "Edit Teacher" : "Add New Teacher"}
+        </h2>
 
         <form className="space-y-6">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
             <div>
-              <label className="block text-gray-600 mb-1 font-medium">Employee Code*</label>
+              <label className="block text-gray-600 mb-1 font-medium">
+                Employee Code*
+              </label>
               <input
                 type="text"
                 name="emp_code"
@@ -138,7 +157,9 @@ export default function TeacherPage() {
             </div>
 
             <div>
-              <label className="block text-gray-600 mb-1 font-medium">First Name*</label>
+              <label className="block text-gray-600 mb-1 font-medium">
+                First Name*
+              </label>
               <input
                 type="text"
                 name="first_name"
@@ -151,7 +172,9 @@ export default function TeacherPage() {
             </div>
 
             <div>
-              <label className="block text-gray-600 mb-1 font-medium">Last Name</label>
+              <label className="block text-gray-600 mb-1 font-medium">
+                Last Name
+              </label>
               <input
                 type="text"
                 name="last_name"
@@ -163,7 +186,9 @@ export default function TeacherPage() {
             </div>
 
             <div>
-              <label className="block text-gray-600 mb-1 font-medium">Email</label>
+              <label className="block text-gray-600 mb-1 font-medium">
+                Email
+              </label>
               <input
                 type="email"
                 name="email"
@@ -175,7 +200,9 @@ export default function TeacherPage() {
             </div>
 
             <div>
-              <label className="block text-gray-600 mb-1 font-medium">Phone</label>
+              <label className="block text-gray-600 mb-1 font-medium">
+                Phone
+              </label>
               <input
                 type="text"
                 name="phone"
@@ -187,7 +214,9 @@ export default function TeacherPage() {
             </div>
 
             <div>
-              <label className="block text-gray-600 mb-1 font-medium">Department*</label>
+              <label className="block text-gray-600 mb-1 font-medium">
+                Department*
+              </label>
               <input
                 type="text"
                 name="department"
@@ -200,22 +229,38 @@ export default function TeacherPage() {
             </div>
           </div>
 
-          <button
-  type="submit"
-  onClick={teacher.teacher_id ? handleUpdate : handleSubmit}
-  className="w-full sm:w-auto bg-indigo-600 text-white px-6 py-3 rounded-md font-semibold shadow-md hover:bg-indigo-700 transition"
->
-  {teacher.teacher_id ? "Update Teacher" : "Add Teacher"}
-</button>
+          <div className="flex gap-4">
+            <button
+              type="submit"
+              onClick={teacher.teacher_id ? handleUpdate : handleSubmit}
+              className="bg-indigo-600 text-white px-6 py-3 rounded-md font-semibold shadow-md hover:bg-indigo-700 transition"
+            >
+              {teacher.teacher_id ? "Update Teacher" : "Add Teacher"}
+            </button>
+
+            {teacher.teacher_id && (
+              <button
+                type="button"
+                onClick={resetForm}
+                className="bg-gray-400 text-white px-6 py-3 rounded-md font-semibold shadow-md hover:bg-gray-500 transition"
+              >
+                Cancel
+              </button>
+            )}
+          </div>
         </form>
       </section>
 
-      {/* Teacher List Section */}
+      {/* Teacher List */}
       <section className="max-w-6xl mx-auto bg-white rounded-xl shadow-md p-8">
-        <h2 className="text-3xl font-bold text-gray-700 mb-6 border-b pb-2">Teacher List</h2>
+        <h2 className="text-3xl font-bold text-gray-700 mb-6 border-b pb-2">
+          Teacher List
+        </h2>
 
         {teachersList.length === 0 ? (
-          <p className="text-gray-500 text-center text-lg mt-4">No teachers added yet.</p>
+          <p className="text-gray-500 text-center text-lg mt-4">
+            No teachers added yet.
+          </p>
         ) : (
           <div className="overflow-x-auto">
             <table className="min-w-full border border-gray-200 text-left">
@@ -233,14 +278,16 @@ export default function TeacherPage() {
               <tbody>
                 {teachersList.map((t, idx) => (
                   <tr
-                    key={t.id}
-                    className={`${idx % 2 === 0 ? "bg-gray-50" : "bg-white"} hover:bg-gray-100 transition text-gray-800`}
+                    key={t.teacher_id}
+                    className={`${
+                      idx % 2 === 0 ? "bg-gray-50" : "bg-white"
+                    } hover:bg-gray-100 transition text-gray-800`}
                   >
                     <td className="px-5 py-3">{t.emp_code}</td>
                     <td className="px-5 py-3">{t.first_name}</td>
-                    <td className="px-5 py-3">{t.last_name || '-'}</td>
-                    <td className="px-5 py-3">{t.email || '-'}</td>
-                    <td className="px-5 py-3">{t.phone || '-'}</td>
+                    <td className="px-5 py-3">{t.last_name || "-"}</td>
+                    <td className="px-5 py-3">{t.email || "-"}</td>
+                    <td className="px-5 py-3">{t.phone || "-"}</td>
                     <td className="px-5 py-3">{t.department}</td>
                     <td className="px-5 py-3 flex gap-2">
                       <button
@@ -250,7 +297,7 @@ export default function TeacherPage() {
                         Edit
                       </button>
                       <button
-                        onClick={() => handleDelete(t.id)}
+                        onClick={() => handleDelete(t.teacher_id)}
                         className="bg-red-500 text-white px-3 py-1 rounded hover:bg-red-600 transition"
                       >
                         Delete
